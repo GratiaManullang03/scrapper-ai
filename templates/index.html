@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Universal Smart Scraper</title>
+		<style>
+			* {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
+
+			body {
+				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+					Arial, sans-serif;
+				line-height: 1.6;
+				background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+				min-height: 100vh;
+				padding: 20px;
+			}
+
+			.container {
+				max-width: 1200px;
+				margin: 0 auto;
+			}
+
+			.header {
+				text-align: center;
+				color: white;
+				margin-bottom: 30px;
+			}
+
+			.header h1 {
+				font-size: 2.5rem;
+				margin-bottom: 10px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				gap: 15px;
+			}
+
+			.header p {
+				font-size: 1.1rem;
+				opacity: 0.9;
+			}
+
+			.main-card {
+				background: white;
+				border-radius: 16px;
+				box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+				overflow: hidden;
+			}
+
+			.tabs {
+				display: flex;
+				background: #f7f9fc;
+				border-bottom: 1px solid #e2e8f0;
+			}
+
+			.tab {
+				flex: 1;
+				padding: 20px;
+				text-align: center;
+				cursor: pointer;
+				background: none;
+				border: none;
+				font-size: 16px;
+				font-weight: 600;
+				color: #64748b;
+				transition: all 0.3s;
+			}
+
+			.tab.active {
+				color: #667eea;
+				background: white;
+				border-bottom: 3px solid #667eea;
+			}
+
+			.tab-content {
+				display: none;
+				padding: 30px;
+			}
+
+			.tab-content.active {
+				display: block;
+			}
+
+			.form-group {
+				margin-bottom: 25px;
+			}
+
+			label {
+				display: block;
+				margin-bottom: 8px;
+				font-weight: 600;
+				color: #334155;
+			}
+
+			input[type='url'],
+			textarea {
+				width: 100%;
+				padding: 12px 16px;
+				border: 2px solid #e2e8f0;
+				border-radius: 8px;
+				font-size: 15px;
+				transition: all 0.3s;
+			}
+
+			input[type='url']:focus,
+			textarea:focus {
+				outline: none;
+				border-color: #667eea;
+				box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+			}
+
+			textarea {
+				resize: vertical;
+				min-height: 120px;
+				font-family: inherit;
+			}
+
+			.examples {
+				margin-top: 10px;
+				padding: 15px;
+				background: #f1f5f9;
+				border-radius: 8px;
+				font-size: 14px;
+			}
+
+			.examples h4 {
+				margin-bottom: 10px;
+				color: #475569;
+			}
+
+			.example-item {
+				margin-bottom: 8px;
+				padding: 8px 12px;
+				background: white;
+				border-radius: 6px;
+				cursor: pointer;
+				transition: all 0.2s;
+			}
+
+			.example-item:hover {
+				background: #e2e8f0;
+				transform: translateX(5px);
+			}
+
+			.button-group {
+				display: flex;
+				gap: 10px;
+				margin-top: 20px;
+			}
+
+			button {
+				flex: 1;
+				padding: 14px 24px;
+				border: none;
+				border-radius: 8px;
+				font-size: 16px;
+				font-weight: 600;
+				cursor: pointer;
+				transition: all 0.3s;
+			}
+
+			.btn-primary {
+				background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+				color: white;
+			}
+
+			.btn-primary:hover:not(:disabled) {
+				transform: translateY(-2px);
+				box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+			}
+
+			.btn-secondary {
+				background: #f1f5f9;
+				color: #475569;
+			}
+
+			.btn-secondary:hover {
+				background: #e2e8f0;
+			}
+
+			button:disabled {
+				opacity: 0.6;
+				cursor: not-allowed;
+				transform: none !important;
+			}
+
+			#status {
+				margin-top: 20px;
+				padding: 16px 20px;
+				border-radius: 8px;
+				font-weight: 500;
+				display: none;
+				align-items: center;
+				gap: 10px;
+			}
+
+			#status.loading {
+				background: #fef3c7;
+				color: #92400e;
+				border: 1px solid #fde68a;
+				display: flex;
+			}
+
+			#status.success {
+				background: #d1fae5;
+				color: #065f46;
+				border: 1px solid #a7f3d0;
+				display: flex;
+			}
+
+			#status.error {
+				background: #fee2e2;
+				color: #991b1b;
+				border: 1px solid #fecaca;
+				display: flex;
+			}
+
+			.results-container {
+				margin-top: 30px;
+				max-height: 600px;
+				overflow-y: auto;
+			}
+
+			table {
+				width: 100%;
+				border-collapse: collapse;
+			}
+
+			th,
+			td {
+				padding: 12px 16px;
+				text-align: left;
+				border-bottom: 1px solid #e2e8f0;
+			}
+
+			th {
+				background: #f7f9fc;
+				font-weight: 600;
+				color: #475569;
+				position: sticky;
+				top: 0;
+				z-index: 10;
+			}
+
+			tr:hover {
+				background: #f7f9fc;
+			}
+
+			.empty-cell {
+				color: #94a3b8;
+				font-style: italic;
+			}
+
+			.error-cell {
+				color: #dc2626;
+			}
+
+			.spinner {
+				display: inline-block;
+				width: 20px;
+				height: 20px;
+				border: 3px solid transparent;
+				border-radius: 50%;
+				border-top-color: #92400e;
+				animation: spin 1s ease-in-out infinite;
+			}
+
+			@keyframes spin {
+				to {
+					transform: rotate(360deg);
+				}
+			}
+
+			.analysis-results {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+				gap: 15px;
+				margin-top: 20px;
+			}
+
+			.analysis-card {
+				padding: 20px;
+				background: #f7f9fc;
+				border-radius: 8px;
+				text-align: center;
+			}
+
+			.analysis-card h3 {
+				font-size: 2rem;
+				color: #667eea;
+				margin-bottom: 5px;
+			}
+
+			.analysis-card p {
+				color: #64748b;
+				font-size: 14px;
+			}
+
+			.json-preview {
+				background: #1e293b;
+				color: #e2e8f0;
+				padding: 20px;
+				border-radius: 8px;
+				overflow-x: auto;
+				font-family: 'Monaco', 'Consolas', monospace;
+				font-size: 14px;
+				line-height: 1.5;
+				margin-top: 20px;
+			}
+
+			.download-section {
+				margin-top: 20px;
+				display: flex;
+				gap: 10px;
+				align-items: center;
+			}
+
+			@media (max-width: 768px) {
+				.header h1 {
+					font-size: 2rem;
+				}
+
+				.tabs {
+					flex-direction: column;
+				}
+
+				.button-group {
+					flex-direction: column;
+				}
+
+				.analysis-results {
+					grid-template-columns: 1fr;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<div class="header">
+				<h1>
+					<span>🧠</span>
+					<span>Universal Smart Scraper</span>
+				</h1>
+				<p>Extract data from any website intelligently - No coding required!</p>
+			</div>
+
+			<div class="main-card">
+				<div class="tabs">
+					<button class="tab active" onclick="switchTab('scrape')">
+						Extract Data
+					</button>
+					<button class="tab" onclick="switchTab('analyze')">
+						Analyze Structure
+					</button>
+				</div>
+
+				<!-- Scrape Tab -->
+				<div id="scrape-tab" class="tab-content active">
+					<form id="scrapeForm">
+						<div class="form-group">
+							<label for="url">Target URL:</label>
+							<input
+								type="url"
+								id="url"
+								name="url"
+								placeholder="https://example.com/page"
+								required
+							/>
+						</div>
+
+						<div class="form-group">
+							<label for="instruction">What do you want to extract?</label>
+							<textarea
+								id="instruction"
+								name="instruction"
+								placeholder="Describe what data you want to extract in natural language..."
+								required
+							></textarea>
+
+							<div class="examples">
+								<h4>📝 Example Instructions (click to use):</h4>
+								<div
+									class="example-item"
+									onclick="useExample('Extract all product names, prices, and availability status')"
+								>
+									🛍️ "Extract all product names, prices, and availability
+									status"
+								</div>
+								<div
+									class="example-item"
+									onclick="useExample('Get the total revenue, number of customers, and pending orders from the dashboard')"
+								>
+									📊 "Get the total revenue, number of customers, and pending
+									orders from the dashboard"
+								</div>
+								<div
+									class="example-item"
+									onclick="useExample('Extract all rows from the transaction table including date, description, and amount')"
+								>
+									📑 "Extract all rows from the transaction table including
+									date, description, and amount"
+								</div>
+								<div
+									class="example-item"
+									onclick="useExample('Find all contact information including emails, phone numbers, and addresses')"
+								>
+									📧 "Find all contact information including emails, phone
+									numbers, and addresses"
+								</div>
+							</div>
+						</div>
+
+						<div class="button-group">
+							<button type="submit" class="btn-primary" id="submitBtn">
+								Start Extraction
+							</button>
+							<button type="button" class="btn-secondary" onclick="clearForm()">
+								Clear
+							</button>
+						</div>
+					</form>
+
+					<div id="status"></div>
+					<div id="resultsContainer"></div>
+				</div>
+
+				<!-- Analyze Tab -->
+				<div id="analyze-tab" class="tab-content">
+					<form id="analyzeForm">
+						<div class="form-group">
+							<label for="analyze-url">URL to Analyze:</label>
+							<input
+								type="url"
+								id="analyze-url"
+								name="url"
+								placeholder="https://example.com/page"
+								required
+							/>
+						</div>
+
+						<button type="submit" class="btn-primary">
+							Analyze Page Structure
+						</button>
+					</form>
+
+					<div id="analyzeStatus"></div>
+					<div id="analyzeResults"></div>
+				</div>
+			</div>
+		</div>
+
+		<script>
+			let lastResults = null;
+
+			// Tab switching
+			function switchTab(tab) {
+				document
+					.querySelectorAll('.tab')
+					.forEach((t) => t.classList.remove('active'));
+				document
+					.querySelectorAll('.tab-content')
+					.forEach((c) => c.classList.remove('active'));
+
+				if (tab === 'scrape') {
+					document.querySelector('.tab:nth-child(1)').classList.add('active');
+					document.getElementById('scrape-tab').classList.add('active');
+				} else {
+					document.querySelector('.tab:nth-child(2)').classList.add('active');
+					document.getElementById('analyze-tab').classList.add('active');
+				}
+			}
+
+			// Use example
+			function useExample(text) {
+				document.getElementById('instruction').value = text;
+				document.getElementById('instruction').focus();
+			}
+
+			// Clear form
+			function clearForm() {
+				document.getElementById('scrapeForm').reset();
+				document.getElementById('status').style.display = 'none';
+				document.getElementById('resultsContainer').innerHTML = '';
+				lastResults = null;
+			}
+
+			// Scrape form handler
+			document
+				.getElementById('scrapeForm')
+				.addEventListener('submit', async (e) => {
+					e.preventDefault();
+
+					const formData = new FormData(e.target);
+					const statusDiv = document.getElementById('status');
+					const resultsDiv = document.getElementById('resultsContainer');
+					const submitBtn = document.getElementById('submitBtn');
+
+					// Update UI
+					statusDiv.className = 'loading';
+					statusDiv.innerHTML =
+						'<span class="spinner"></span>Extracting data from the page...';
+					resultsDiv.innerHTML = '';
+					submitBtn.disabled = true;
+					submitBtn.textContent = 'Processing...';
+					lastResults = null;
+
+					try {
+						const response = await fetch('/scrape', {
+							method: 'POST',
+							body: formData,
+						});
+
+						const result = await response.json();
+
+						if (!response.ok) {
+							throw new Error(result.error || 'Server error occurred');
+						}
+
+						statusDiv.className = 'success';
+						statusDiv.innerHTML = '✅ Data extracted successfully!';
+						displayResults(result);
+						lastResults = result;
+					} catch (error) {
+						statusDiv.className = 'error';
+						statusDiv.innerHTML = `❌ Error: ${error.message}`;
+					} finally {
+						submitBtn.disabled = false;
+						submitBtn.textContent = 'Start Extraction';
+					}
+				});
+
+			// Analyze form handler
+			document
+				.getElementById('analyzeForm')
+				.addEventListener('submit', async (e) => {
+					e.preventDefault();
+
+					const formData = new FormData(e.target);
+					const statusDiv = document.getElementById('analyzeStatus');
+					const resultsDiv = document.getElementById('analyzeResults');
+
+					statusDiv.className = 'loading';
+					statusDiv.innerHTML =
+						'<span class="spinner"></span>Analyzing page structure...';
+					statusDiv.style.display = 'flex';
+					resultsDiv.innerHTML = '';
+
+					try {
+						const response = await fetch('/analyze', {
+							method: 'POST',
+							body: formData,
+						});
+
+						const result = await response.json();
+
+						if (!response.ok) {
+							throw new Error(result.error || 'Analysis failed');
+						}
+
+						statusDiv.className = 'success';
+						statusDiv.innerHTML = '✅ Analysis complete!';
+						displayAnalysis(result);
+					} catch (error) {
+						statusDiv.className = 'error';
+						statusDiv.innerHTML = `❌ Error: ${error.message}`;
+					}
+				});
+
+			// Display scrape results
+			function displayResults(data) {
+				const container = document.getElementById('resultsContainer');
+
+				if (!Array.isArray(data) || data.length === 0) {
+					container.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #64748b;">
+                        <p>No data extracted. Try a different instruction or check if the page loaded correctly.</p>
+                    </div>
+                `;
+					return;
+				}
+
+				// Create table
+				const table = document.createElement('table');
+				const thead = document.createElement('thead');
+				const tbody = document.createElement('tbody');
+
+				// Get all unique keys
+				const allKeys = [...new Set(data.flatMap((item) => Object.keys(item)))];
+
+				// Create header
+				const headerRow = document.createElement('tr');
+				allKeys.forEach((key) => {
+					const th = document.createElement('th');
+					th.textContent = formatKey(key);
+					headerRow.appendChild(th);
+				});
+				thead.appendChild(headerRow);
+
+				// Create body rows
+				data.forEach((item) => {
+					const row = document.createElement('tr');
+					allKeys.forEach((key) => {
+						const td = document.createElement('td');
+						const value = item[key];
+
+						if (!value || value === '') {
+							td.innerHTML = '<span class="empty-cell">-</span>';
+						} else if (value.toString().includes('Error:')) {
+							td.innerHTML = `<span class="error-cell">${escapeHtml(
+								value
+							)}</span>`;
+						} else {
+							td.textContent = value;
+						}
+
+						row.appendChild(td);
+					});
+					tbody.appendChild(row);
+				});
+
+				table.appendChild(thead);
+				table.appendChild(tbody);
+
+				// Add download section
+				const downloadSection = document.createElement('div');
+				downloadSection.className = 'download-section';
+				downloadSection.innerHTML = `
+                <button class="btn-secondary" onclick="downloadJSON()">
+                    📥 Download as JSON
+                </button>
+                <button class="btn-secondary" onclick="downloadCSV()">
+                    📊 Download as CSV
+                </button>
+                <button class="btn-secondary" onclick="showJSON()">
+                    👁️ View JSON
+                </button>
+            `;
+
+				container.innerHTML = '<div class="results-container"></div>';
+				container.querySelector('.results-container').appendChild(table);
+				container.appendChild(downloadSection);
+			}
+
+			// Display analysis results
+			function displayAnalysis(data) {
+				const container = document.getElementById('analyzeResults');
+
+				let html = '<div class="analysis-results">';
+
+				// Element counts
+				if (data.elements) {
+					Object.entries(data.elements).forEach(([key, count]) => {
+						html += `
+                        <div class="analysis-card">
+                            <h3>${count}</h3>
+                            <p>${formatKey(key)}</p>
+                        </div>
+                    `;
+					});
+				}
+
+				html += '</div>';
+
+				// Pattern detection
+				if (data.patterns) {
+					html +=
+						'<h3 style="margin-top: 30px; color: #334155;">Detected Patterns:</h3>';
+					html += '<ul style="margin-top: 10px; padding-left: 20px;">';
+					Object.entries(data.patterns).forEach(([pattern, detected]) => {
+						if (detected) {
+							html += `<li style="margin-bottom: 5px; color: #64748b;">${formatKey(
+								pattern
+							)}</li>`;
+						}
+					});
+					html += '</ul>';
+				}
+
+				// Sample data
+				if (data.sample_data && Object.keys(data.sample_data).length > 0) {
+					html +=
+						'<h3 style="margin-top: 30px; color: #334155;">Sample Data Found:</h3>';
+					html += '<div class="json-preview">';
+					html += escapeHtml(JSON.stringify(data.sample_data, null, 2));
+					html += '</div>';
+				}
+
+				container.innerHTML = html;
+			}
+
+			// Helper functions
+			function formatKey(key) {
+				return key
+					.replace(/([A-Z])/g, ' $1')
+					.replace(/_/g, ' ')
+					.replace(/^./, (str) => str.toUpperCase())
+					.trim();
+			}
+
+			function escapeHtml(text) {
+				const div = document.createElement('div');
+				div.textContent = text;
+				return div.innerHTML;
+			}
+
+			function downloadJSON() {
+				if (!lastResults) return;
+
+				const dataStr = JSON.stringify(lastResults, null, 2);
+				const dataUri =
+					'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+				const filename = `scraped_data_${new Date()
+					.toISOString()
+					.slice(0, 19)
+					.replace(/:/g, '-')}.json`;
+
+				const link = document.createElement('a');
+				link.href = dataUri;
+				link.download = filename;
+				link.click();
+			}
+
+			function downloadCSV() {
+				if (
+					!lastResults ||
+					!Array.isArray(lastResults) ||
+					lastResults.length === 0
+				)
+					return;
+
+				// Get headers
+				const headers = [
+					...new Set(lastResults.flatMap((item) => Object.keys(item))),
+				];
+
+				// Create CSV content
+				let csv = headers.join(',') + '\n';
+
+				lastResults.forEach((item) => {
+					const row = headers.map((header) => {
+						const value = item[header] || '';
+						// Escape values containing commas or quotes
+						if (
+							value.toString().includes(',') ||
+							value.toString().includes('"')
+						) {
+							return `"${value.toString().replace(/"/g, '""')}"`;
+						}
+						return value;
+					});
+					csv += row.join(',') + '\n';
+				});
+
+				const dataUri =
+					'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+				const filename = `scraped_data_${new Date()
+					.toISOString()
+					.slice(0, 19)
+					.replace(/:/g, '-')}.csv`;
+
+				const link = document.createElement('a');
+				link.href = dataUri;
+				link.download = filename;
+				link.click();
+			}
+
+			function showJSON() {
+				if (!lastResults) return;
+
+				const container = document.getElementById('resultsContainer');
+				const jsonView = document.createElement('div');
+				jsonView.className = 'json-preview';
+				jsonView.textContent = JSON.stringify(lastResults, null, 2);
+
+				container.appendChild(jsonView);
+				jsonView.scrollIntoView({ behavior: 'smooth' });
+			}
+		</script>
+	</body>
+</html>

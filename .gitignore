@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environment
+venv/
+.venv/
+env/
+ENV/
+
+# File Environment (Sangat Penting!)
+.env
+*.env
+
+# Profil Browser Automation
+ChromeProfileForScraping/
+
+# File Editor/IDE
+.vscode/
+.idea/
+
+# File Sistem Operasi
+.DS_Store
+Thumbs.db

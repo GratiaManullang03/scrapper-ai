@@ -1,0 +1,122 @@
+import os
+import json
+from flask import Flask, render_template, request, jsonify
+from playwright.sync_api import sync_playwright, Error
+import together
+from dotenv import load_dotenv
+import re
+
+# Muat environment variable dari file .env (opsional, untuk kerapian)
+load_dotenv()
+
+# --- Konfigurasi ---
+app = Flask(__name__)
+# Ambil API key dari environment variable
+# Buat file .env di folder yang sama dan isi dengan:
+# TOGETHER_AI_API_KEY="xxxxxxxxxxxxx"
+together.api_key = os.getenv("TOGETHER_AI_API_KEY")
+BROWSER_DEBUG_PORT = "http://localhost:9222" # Sesuaikan jika Anda menggunakan port lain
+
+# --- Route untuk Halaman Utama ---
+@app.route('/')
+def index():
+    """Menampilkan halaman HTML utama."""
+    return render_template('index.html')
+
+# --- Route untuk Proses Scraping ---
+@app.route('/scrape', methods=['POST'])
+def scrape():
+    """API endpoint untuk menerima URL dan instruksi, lalu melakukan scraping."""
+    data = request.form
+    url = data.get('url')
+    instruction = data.get('instruction')
+
+    if not url or not instruction:
+        return jsonify({"error": "URL dan Instruksi tidak boleh kosong."}), 400
+    
+    if not together.api_key:
+        return jsonify({"error": "TOGETHER_AI_API_KEY tidak ditemukan. Mohon atur environment variable."}), 500
+
+    print(f"Menerima permintaan scrape untuk URL: {url}")
+    print(f"Instruksi: {instruction}")
+
+    try:
+        # --- MULAI KODE DIAGNOSTIK ---
+        import sys
+        # import together
+        print("="*20)
+        print("HASIL DIAGNOSTIK LINGKUNGAN")
+        print(f"LOKASI PYTHON YANG DIGUNAKAN: {sys.executable}")
+        print(f"LOKASI MODUL 'together' YANG DI-IMPORT: {together.__file__}")
+        print(f"ATRIBUT YANG TERSEDIA DI 'together': {dir(together)}")
+        print("="*20)
+        # --- SELESAI KODE DIAGNOSTIK ---
+
+        # --- Langkah 1: Ambil HTML menggunakan Playwright ---
+        with sync_playwright() as p:
+            print(f"Menghubungkan ke browser di {BROWSER_DEBUG_PORT}...")
+            # Menghubungkan ke browser yang sudah berjalan
+            browser = p.chromium.connect_over_cdp(BROWSER_DEBUG_PORT)
+            context = browser.contexts[0] # Menggunakan konteks browser yang ada (termasuk sesi login)
+            page = context.new_page()
+            
+            print(f"Navigasi ke {url}...")
+            page.goto(url, wait_until='networkidle', timeout=60000)
+            
+            print("Mengambil konten HTML...")
+            html_content = page.content()
+            page.close()
+            print(f"Berhasil mengambil HTML dengan panjang {len(html_content)} karakter.")
+
+        # --- Langkah 2: Kirim ke Together.ai untuk Ekstraksi ---
+        print("Mengirim data ke Together.ai...")
+        prompt = f"""
+        Berdasarkan konten HTML berikut, ekstrak informasi sesuai dengan instruksi ini: "{instruction}".
+
+        Tolong kembalikan hasilnya HANYA dalam format array JSON yang valid (sebuah list dari object-object).
+        Setiap objek dalam array merepresentasikan satu item yang diekstrak.
+        Pastikan nama key pada JSON ditulis dalam format camelCase atau snake_case yang konsisten.
+        JANGAN tambahkan penjelasan atau teks apapun di luar blok JSON.
+
+        HTML:
+        ```html
+        {html_content}
+        ```
+        """
+
+        response = together.chat.completions.create(
+            model="meta-llama/Llama-3-8b-chat-hf", # Model yang bagus untuk mengikuti instruksi & format
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.1, # Suhu rendah untuk hasil yang lebih deterministik
+            max_tokens=4096,
+            response_format={"type": "json_object"}, # Meminta output JSON secara eksplisit jika model mendukung
+        )
+
+        ai_response_content = response.choices[0].message.content
+        print("Menerima respons dari AI.")
+
+        # --- Langkah 3: Parse Hasil JSON ---
+        try:
+            # Coba parse langsung
+            extracted_data = json.loads(ai_response_content)
+        except json.JSONDecodeError:
+            # Jika gagal, coba cari blok JSON di dalam respons (beberapa model masih membungkusnya)
+            print("Gagal parse JSON secara langsung, mencoba mencari blok JSON...")
+            json_block_match = re.search(r'\[.*\]', ai_response_content, re.DOTALL)
+            if json_block_match:
+                extracted_data = json.loads(json_block_match.group(0))
+            else:
+                 raise ValueError("Respons AI tidak mengandung format JSON yang valid.")
+
+
+        return jsonify(extracted_data)
+
+    except Error as e:
+        print(f"Playwright Error: {e}")
+        return jsonify({"error": f"Gagal terhubung atau mengontrol browser. Pastikan browser sudah berjalan dengan remote debugging port. Detail: {e}"}), 500
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return jsonify({"error": f"Terjadi kesalahan: {e}"}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5001)

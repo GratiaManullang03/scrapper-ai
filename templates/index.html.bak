@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Smart AI Scraper</title>
+		<style>
+			body {
+				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+					Helvetica, Arial, sans-serif;
+				line-height: 1.6;
+				padding: 20px;
+				max-width: 900px;
+				margin: auto;
+				background-color: #f4f4f9;
+			}
+			h1 {
+				color: #333;
+			}
+			form {
+				background: #fff;
+				padding: 20px;
+				border-radius: 8px;
+				box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+			}
+			label {
+				display: block;
+				margin-bottom: 8px;
+				font-weight: bold;
+			}
+			input[type='url'],
+			textarea {
+				width: 100%;
+				padding: 10px;
+				margin-bottom: 15px;
+				border: 1px solid #ccc;
+				border-radius: 4px;
+				box-sizing: border-box;
+			}
+			textarea {
+				resize: vertical;
+				min-height: 80px;
+			}
+			button {
+				background-color: #007bff;
+				color: white;
+				padding: 10px 15px;
+				border: none;
+				border-radius: 4px;
+				cursor: pointer;
+				font-size: 16px;
+			}
+			button:disabled {
+				background-color: #aaa;
+			}
+			#status {
+				margin-top: 20px;
+				font-style: italic;
+				color: #555;
+			}
+			#resultsTable {
+				margin-top: 20px;
+			}
+			table {
+				width: 100%;
+				border-collapse: collapse;
+				background: #fff;
+				box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+			}
+			th,
+			td {
+				padding: 12px;
+				border: 1px solid #ddd;
+				text-align: left;
+			}
+			th {
+				background-color: #007bff;
+				color: white;
+			}
+			tr:nth-child(even) {
+				background-color: #f2f2f2;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>🧠 Smart AI Scraper</h1>
+		<p>
+			Buka website target di browser yang sudah berjalan dengan mode debug, lalu
+			masukkan URL dan instruksi di bawah ini.
+		</p>
+
+		<form id="scrapeForm">
+			<div>
+				<label for="url">URL Target:</label>
+				<input
+					type="url"
+					id="url"
+					name="url"
+					placeholder="https://seller.shopee.co.id/portal/product/list/all"
+					required
+				/>
+			</div>
+			<div>
+				<label for="instruction">Instruksi Scraping:</label>
+				<textarea
+					id="instruction"
+					name="instruction"
+					placeholder="Contoh: Ekstrak nama produk, SKU Induk, dan stok dari semua produk yang terlihat."
+					required
+				></textarea>
+			</div>
+			<button type="submit" id="submitBtn">Mulai Scrape</button>
+		</form>
+
+		<div id="status"></div>
+		<div id="resultsTable"></div>
+
+		<script>
+			document
+				.getElementById('scrapeForm')
+				.addEventListener('submit', async function (event) {
+					event.preventDefault();
+
+					const form = event.target;
+					const formData = new FormData(form);
+					const statusDiv = document.getElementById('status');
+					const resultsDiv = document.getElementById('resultsTable');
+					const submitBtn = document.getElementById('submitBtn');
+
+					// UI feedback
+					statusDiv.textContent =
+						'⏳ Menghubungkan ke browser dan mengambil HTML...';
+					resultsDiv.innerHTML = '';
+					submitBtn.disabled = true;
+
+					try {
+						const response = await fetch('/scrape', {
+							method: 'POST',
+							body: formData,
+						});
+
+						const result = await response.json();
+
+						if (!response.ok) {
+							throw new Error(result.error || 'Terjadi kesalahan pada server.');
+						}
+
+						statusDiv.textContent = '✅ Sukses! Menampilkan data...';
+						displayResults(result);
+					} catch (error) {
+						statusDiv.textContent = `❌ Error: ${error.message}`;
+					} finally {
+						submitBtn.disabled = false;
+					}
+				});
+
+			function displayResults(data) {
+				const container = document.getElementById('resultsTable');
+				if (!Array.isArray(data) || data.length === 0) {
+					container.innerHTML =
+						'<p>AI tidak mengembalikan data atau format tidak dikenali.</p>';
+					return;
+				}
+
+				const table = document.createElement('table');
+				const thead = document.createElement('thead');
+				const tbody = document.createElement('tbody');
+				const headerRow = document.createElement('tr');
+
+				// Create headers from the keys of the first object
+				const headers = Object.keys(data[0]);
+				headers.forEach((headerText) => {
+					const th = document.createElement('th');
+					th.textContent = headerText;
+					headerRow.appendChild(th);
+				});
+				thead.appendChild(headerRow);
+
+				// Create body rows
+				data.forEach((item) => {
+					const row = document.createElement('tr');
+					headers.forEach((header) => {
+						const td = document.createElement('td');
+						td.textContent = item[header] || ''; // Handle null/undefined values
+						row.appendChild(td);
+					});
+					tbody.appendChild(row);
+				});
+
+				table.appendChild(thead);
+				table.appendChild(tbody);
+				container.appendChild(table);
+			}
+		</script>
+	</body>
+</html>
